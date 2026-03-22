@@ -1,8 +1,8 @@
 # ============================================================
 # WordPress Dev Stack — compose.yaml
 # ============================================================
-# Prerequis : le projet docker-base doit etre en cours d'execution
-#   cd ~/project/docker-base && make up
+# Prerequis : le projet local-network-multisite doit etre en cours d'execution
+#   cd ~/project/local-network-multisite && make up
 #
 # Usage :
 #   docker compose up -d
@@ -12,8 +12,8 @@
 # ============================================================
 
 networks:
-  # Reseau partage avec Traefik (cree et gere par docker-base)
-  # Le nom DOIT correspondre a TRAEFIK_NETWORK dans docker-base/.env (defaut : traefik-net)
+  # Reseau partage avec Traefik (cree et gere par local-network-multisite)
+  # Le nom DOIT correspondre a TRAEFIK_NETWORK dans local-network-multisite/.env (defaut : traefik-net)
   traefik-net:
     name: ${TRAEFIK_NETWORK:-traefik-net}
     external: true
@@ -53,7 +53,7 @@ services:
       - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/custom.ini:ro
     labels:
       - "traefik.enable=true"
-      # HTTPS — Traefik (docker-base) gere la redirection HTTP -> HTTPS globalement
+      # HTTPS — Traefik (local-network-multisite) gere la redirection HTTP -> HTTPS globalement
       - "traefik.http.routers.${PROJECT_NAME:-wordpress}.rule=Host(`${SITE_DOMAIN:-wordpress.local}`)"
       - "traefik.http.routers.${PROJECT_NAME:-wordpress}.entrypoints=websecure"
       - "traefik.http.routers.${PROJECT_NAME:-wordpress}.tls=true"

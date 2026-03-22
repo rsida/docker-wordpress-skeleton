@@ -16,7 +16,7 @@ help: ## Affiche cette aide
 
 ## -- Demarrage ------------------------------------------------------------
 
-start: ## Demarre le stack WordPress (docker-base/Traefik doit deja tourner)
+start: ## Demarre le stack WordPress (local-network-multisite/Traefik doit deja tourner)
 	docker compose up -d
 
 stop: ## Arrete tous les conteneurs de ce projet
@@ -61,5 +61,5 @@ check-network: ## Verifie que le reseau Traefik partage existe
 	@docker network inspect $(TRAEFIK_NETWORK) > /dev/null 2>&1 \
 		&& echo "Reseau '$(TRAEFIK_NETWORK)' : OK" \
 		|| (echo "ERREUR : le reseau '$(TRAEFIK_NETWORK)' n'existe pas." \
-			&& echo "         Lancer docker-base d'abord : cd ~/project/docker-base && make up" \
+			&& echo "         Lancer local-network-multisite d'abord : cd ~/project/local-network-multisite && make up" \
 			&& exit 1)
