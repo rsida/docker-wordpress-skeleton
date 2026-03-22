@@ -1,0 +1,22 @@
+# Environment
+.env
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Claude Code
+.claude/
+
+# WordPress uploads
+wp-content/uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker/traefik/certs/*.crt
+docker/traefik/certs/*.key

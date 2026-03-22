@@ -1,0 +1,126 @@
+# ============================================================
+# WordPress Dev Stack — compose.yaml
+# ============================================================
+# Prerequis : le projet docker-base doit etre en cours d'execution
+#   cd ~/project/docker-base && make up
+#
+# Usage :
+#   docker compose up -d
+#
+# Copier .env.example → .env et ajuster SITE_DOMAIN / PROJECT_NAME
+# avant de lancer. Chaque site doit avoir un PROJECT_NAME unique.
+# ============================================================
+
+networks:
+  # Reseau partage avec Traefik (cree et gere par docker-base)
+  # Le nom DOIT correspondre a TRAEFIK_NETWORK dans docker-base/.env (defaut : traefik-net)
+  traefik-net:
+    name: ${TRAEFIK_NETWORK:-traefik-net}
+    external: true
+
+  # Reseau isole par projet (WordPress <-> MariaDB <-> phpMyAdmin <-> Mailpit)
+  internal:
+
+services:
+
+  # ----------------------------------------------------------
+  # WordPress
+  # ----------------------------------------------------------
+  wordpress:
+    image: wordpress:php8.3-apache
+    restart: unless-stopped
+    environment:
+      WORDPRESS_DB_HOST: mariadb
+      WORDPRESS_DB_NAME: ${DB_NAME:-wordpress}
+      WORDPRESS_DB_USER: ${DB_USER:-wpuser}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD:-wppassword}
+      WORDPRESS_TABLE_PREFIX: ${TABLE_PREFIX:-wp_}
+      WORDPRESS_DEBUG: ${WP_DEBUG:-1}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_SITEURL', 'https://${SITE_DOMAIN:-wordpress.local}');
+        define('WP_HOME', 'https://${SITE_DOMAIN:-wordpress.local}');
+        /* Limites memoire WordPress (doit rester <= memory_limit dans docker/php/custom.ini) */
+        define('WP_MEMORY_LIMIT', '${WP_MEMORY_LIMIT:-256M}');
+        define('WP_MAX_MEMORY_LIMIT', '${WP_MAX_MEMORY_LIMIT:-256M}');
+        /* Acces direct au systeme de fichiers (evite la demande FTP) */
+        define('FS_METHOD', 'direct');
+        /* Mail via Mailpit SMTP */
+        define('SMTP_HOST', 'mailpit');
+        define('SMTP_PORT', 1025);
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./wp-content:/var/www/html/wp-content:cached
+      - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    labels:
+      - "traefik.enable=true"
+      # HTTPS — Traefik (docker-base) gere la redirection HTTP -> HTTPS globalement
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}.rule=Host(`${SITE_DOMAIN:-wordpress.local}`)"
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}.entrypoints=websecure"
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}.tls=true"
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}.middlewares=secure-headers@file"
+      - "traefik.http.services.${PROJECT_NAME:-wordpress}.loadbalancer.server.port=80"
+    depends_on:
+      - mariadb
+    networks:
+      - traefik-net
+      - internal
+
+  # ----------------------------------------------------------
+  # MariaDB
+  # ----------------------------------------------------------
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-wordpress}
+      MYSQL_USER: ${DB_USER:-wpuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-wppassword}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - internal
+
+  # ----------------------------------------------------------
+  # phpMyAdmin — accessible sur pma.<SITE_DOMAIN>
+  # ----------------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mariadb
+      PMA_USER: root
+      PMA_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      UPLOAD_LIMIT: 100M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}-pma.rule=Host(`pma.${SITE_DOMAIN:-wordpress.local}`)"
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}-pma.entrypoints=websecure"
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}-pma.tls=true"
+      - "traefik.http.services.${PROJECT_NAME:-wordpress}-pma.loadbalancer.server.port=80"
+    depends_on:
+      - mariadb
+    networks:
+      - traefik-net
+      - internal
+
+  # ----------------------------------------------------------
+  # Mailpit — intercepte tous les mails WordPress
+  # Interface web sur mail.<SITE_DOMAIN>
+  # ----------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}-mail.rule=Host(`mail.${SITE_DOMAIN:-wordpress.local}`)"
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}-mail.entrypoints=websecure"
+      - "traefik.http.routers.${PROJECT_NAME:-wordpress}-mail.tls=true"
+      - "traefik.http.services.${PROJECT_NAME:-wordpress}-mail.loadbalancer.server.port=8025"
+    networks:
+      - traefik-net
+      - internal
+
+volumes:
+  wordpress_data:
+  db_data:
