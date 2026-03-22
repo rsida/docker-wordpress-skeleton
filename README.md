@@ -1,52 +1,52 @@
-# docker-wordpress-skeleton — Stack WordPress locale avec Docker
+# docker-wordpress-skeleton — Local WordPress stack with Docker
 
-Stack de développement WordPress local basée sur Docker. Elle inclut WordPress, MariaDB, phpMyAdmin et Mailpit, accessibles via des domaines locaux en HTTPS sans spécifier de port. Le routage HTTPS est assuré par le reverse proxy Traefik fourni par le projet **[local-network-multisite](https://github.com/rsida/local-network-multisite)**, qui est une dépendance obligatoire.
+A local WordPress development stack based on Docker. It includes WordPress, MariaDB, phpMyAdmin and Mailpit, accessible via local HTTPS domains without specifying a port. HTTPS routing is handled by the Traefik reverse proxy provided by the **[local-network-multisite](https://github.com/rsida/local-network-multisite)** project, which is a mandatory dependency.
 
-## Sommaire
+## Table of Contents
 
-1. [Prérequis](#1-prérequis)
+1. [Prerequisites](#1-prerequisites)
 2. [Architecture](#2-architecture)
-3. [De zéro à WordPress — installation complète](#3-de-zéro-à-wordpress--installation-complète)
-   - [Étape 1 — Cloner et lancer local-network-multisite](#étape-1--cloner-et-lancer-local-network-multisite)
-   - [Étape 2 — Cloner docker-wordpress-skeleton](#étape-2--cloner-wordpressbuilder)
-   - [Étape 3 — Configurer l'environnement](#étape-3--configurer-lenvironnement)
-   - [Étape 4 — Déclarer le domaine dans le fichier hosts](#étape-4--déclarer-le-domaine-dans-le-fichier-hosts)
-   - [Étape 5 — Vérifier et lancer la stack](#étape-5--vérifier-et-lancer-la-stack)
-   - [Étape 6 — Finaliser l'installation WordPress](#étape-6--finaliser-linstallation-wordpress)
-4. [Variables d'environnement](#4-variables-denvironnement)
-5. [Configurer les limites PHP](#5-configurer-les-limites-php)
-6. [Lancer plusieurs sites en parallèle](#6-lancer-plusieurs-sites-en-parallèle)
-7. [Services disponibles](#7-services-disponibles)
-8. [Commandes Make](#8-commandes-make)
-9. [Structure des fichiers](#9-structure-des-fichiers)
-10. [Dépannage](#10-dépannage)
+3. [From zero to WordPress — full installation](#3-from-zero-to-wordpress--full-installation)
+   - [Step 1 — Clone and start local-network-multisite](#step-1--clone-and-start-local-network-multisite)
+   - [Step 2 — Clone docker-wordpress-skeleton](#step-2--clone-docker-wordpress-skeleton)
+   - [Step 3 — Configure the environment](#step-3--configure-the-environment)
+   - [Step 4 — Declare the domain in the hosts file](#step-4--declare-the-domain-in-the-hosts-file)
+   - [Step 5 — Verify and start the stack](#step-5--verify-and-start-the-stack)
+   - [Step 6 — Complete the WordPress installation](#step-6--complete-the-wordpress-installation)
+4. [Environment variables](#4-environment-variables)
+5. [Configuring PHP limits](#5-configuring-php-limits)
+6. [Running multiple sites in parallel](#6-running-multiple-sites-in-parallel)
+7. [Available services](#7-available-services)
+8. [Make commands](#8-make-commands)
+9. [File structure](#9-file-structure)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
-## 1. Prérequis
+## 1. Prerequisites
 
-### Outils à installer
+### Required tools
 
-| Outil | Vérification | Installation |
-|-------|-------------|--------------|
-| Docker Desktop (Windows) ou Docker Engine | `docker --version` | [docs.docker.com](https://docs.docker.com/desktop/install/windows-install/) |
-| Docker Compose v2 | `docker compose version` | Inclus dans Docker Desktop |
+| Tool | Check | Install |
+|------|-------|---------|
+| Docker Desktop (Windows) or Docker Engine | `docker --version` | [docs.docker.com](https://docs.docker.com/desktop/install/windows-install/) |
+| Docker Compose v2 | `docker compose version` | Included in Docker Desktop |
 | make | `make --version` | `sudo apt install make` |
 
-> Sous Windows avec WSL2, Docker Desktop doit avoir l'intégration WSL2 activée.
-> Vérifier dans Docker Desktop -> Settings -> Resources -> WSL Integration.
+> On Windows with WSL2, Docker Desktop must have WSL2 integration enabled.
+> Check in Docker Desktop → Settings → Resources → WSL Integration.
 
-### Dépendance obligatoire : local-network-multisite
+### Mandatory dependency: local-network-multisite
 
-Ce projet nécessite que **[local-network-multisite](https://github.com/rsida/local-network-multisite)** soit installé et en cours d'exécution. Ce projet distinct fournit :
+This project requires **[local-network-multisite](https://github.com/rsida/local-network-multisite)** to be installed and running. That separate project provides:
 
-- Le reverse proxy **Traefik** (ports 80 et 443)
-- Le réseau Docker partagé `traefik-net`
-- Les certificats TLS locaux (`*.local`) via mkcert
+- The **Traefik** reverse proxy (ports 80 and 443)
+- The shared Docker network `traefik-net`
+- Local TLS certificates (`*.local`) via mkcert
 
-Sans `local-network-multisite` lancé, docker-wordpress-skeleton ne peut pas démarrer (le réseau `traefik-net` n'existe pas).
+Without `local-network-multisite` running, docker-wordpress-skeleton cannot start (the `traefik-net` network does not exist).
 
-Chemin attendu : `~/project/local-network-multisite`
+Expected path: `~/project/local-network-multisite`
 
 ---
 
@@ -54,13 +54,13 @@ Chemin attendu : `~/project/local-network-multisite`
 
 ```
                     +----------------------------------+
-  Navigateur        |      local-network-multisite / Traefik       |  ports 80 / 443
-  Windows  -------> |   route par nom de domaine       |  dashboard: https://traefik.local
+  Browser           |   local-network-multisite / Traefik  |  ports 80 / 443
+  Windows  -------> |   routes by domain name          |  dashboard: https://traefik.local
                     +----------+----------+------------+
                                |          |
                     +----------v---+  +---v----------+
                     |  Site 1      |  |  Site 2       |
-                    |  monsite.    |  |  autresite.   |
+                    |  mysite.     |  |  othersite.   |
                     |  local       |  |  local        |
                     |  ----------  |  |  ----------   |
                     |  WordPress   |  |  WordPress    |
@@ -70,80 +70,80 @@ Chemin attendu : `~/project/local-network-multisite`
                     +--------------+  +---------------+
 ```
 
-### Réseaux Docker
+### Docker networks
 
-Chaque projet docker-wordpress-skeleton utilise deux réseaux Docker :
+Each docker-wordpress-skeleton project uses two Docker networks:
 
-- **`traefik-net`** — réseau externe créé par local-network-multisite. WordPress, phpMyAdmin et Mailpit y sont connectés pour que Traefik puisse les atteindre et router le trafic HTTPS entrant.
-- **`internal`** — réseau isolé propre au projet. Permet la communication entre WordPress, MariaDB, phpMyAdmin et Mailpit, sans les exposer à Traefik ni à l'hôte.
+- **`traefik-net`** — external network created by local-network-multisite. WordPress, phpMyAdmin and Mailpit are connected to it so Traefik can reach them and route incoming HTTPS traffic.
+- **`internal`** — project-specific isolated network. Allows communication between WordPress, MariaDB, phpMyAdmin and Mailpit, without exposing them to Traefik or the host.
 
-MariaDB est uniquement connectée au réseau `internal` : elle n'est pas accessible depuis l'extérieur. Aucun port n'est exposé directement sur l'hôte — tout le trafic passe par Traefik.
+MariaDB is connected only to the `internal` network: it is not accessible from outside. No ports are exposed directly on the host — all traffic goes through Traefik.
 
 ---
 
-## 3. De zéro à WordPress — installation complète
+## 3. From zero to WordPress — full installation
 
-### Étape 1 — Cloner et lancer local-network-multisite
+### Step 1 — Clone and start local-network-multisite
 
-Si ce n'est pas déjà fait, installer et démarrer local-network-multisite. C'est l'opération à faire **une seule fois** — local-network-multisite reste ensuite actif pour tous les projets.
+If not already done, install and start local-network-multisite. This is a **one-time** operation — local-network-multisite then stays active for all projects.
 
 ```bash
-git clone <url-local-network-multisite> ~/project/local-network-multisite
+git clone <local-network-multisite-url> ~/project/local-network-multisite
 cd ~/project/local-network-multisite
 cp .env.example .env
 
-# Générer les certificats TLS locaux (nécessite mkcert)
+# Generate local TLS certificates (requires mkcert)
 make certs
 
-# Démarrer Traefik
+# Start Traefik
 make up
 ```
 
-> Pour que Chrome sur Windows fasse confiance aux certificats, le CA mkcert doit également être importé dans le magasin de certificats Windows. Voir [local-network-multisite README](../local-network-multisite README), section "WSL2 notes".
+> For Chrome on Windows to trust the certificates, the mkcert CA must also be imported into the Windows certificate store. See the [local-network-multisite README](../local-network-multisite/README.md), section "WSL2 notes".
 
-Vérifier que Traefik tourne :
+Verify that Traefik is running:
 
 ```bash
 make ps
 ```
 
-Ouvrir [https://traefik.local](https://traefik.local) dans le navigateur pour confirmer.
+Open [https://traefik.local](https://traefik.local) in the browser to confirm.
 
 ---
 
-### Étape 2 — Cloner docker-wordpress-skeleton
+### Step 2 — Clone docker-wordpress-skeleton
 
 ```bash
 git clone https://github.com/rsida/docker-wordpress-skeleton ~/project/docker-wordpress-skeleton
 cd ~/project/docker-wordpress-skeleton
 ```
 
-Pour utiliser ce projet comme base pour un site nommé `monsite` :
+To use this project as a base for a site named `mysite`:
 
 ```bash
-cp -r ~/project/docker-wordpress-skeleton ~/project/monsite
-cd ~/project/monsite
+cp -r ~/project/docker-wordpress-skeleton ~/project/mysite
+cd ~/project/mysite
 ```
 
 ---
 
-### Étape 3 — Configurer l'environnement
+### Step 3 — Configure the environment
 
 ```bash
 cp .env.example .env
 ```
 
-Editer `.env` :
+Edit `.env`:
 
 ```dotenv
-PROJECT_NAME=monsite          # Identifiant unique (lettres, chiffres, tirets)
-SITE_DOMAIN=monsite.local     # Domaine local souhaité
+PROJECT_NAME=mysite           # Unique identifier (letters, digits, hyphens)
+SITE_DOMAIN=mysite.local      # Desired local domain
 
-TRAEFIK_NETWORK=traefik-net   # Doit correspondre à local-network-multisite/.env
+TRAEFIK_NETWORK=traefik-net   # Must match local-network-multisite/.env
 
-DB_NAME=monsite_db
-DB_USER=monsite_user
-DB_PASSWORD=monsite_pass
+DB_NAME=mysite_db
+DB_USER=mysite_user
+DB_PASSWORD=mysite_pass
 DB_ROOT_PASSWORD=root
 
 TABLE_PREFIX=wp_
@@ -152,32 +152,32 @@ WP_MEMORY_LIMIT=256M
 WP_MAX_MEMORY_LIMIT=256M
 ```
 
-> `PROJECT_NAME` doit être **unique** parmi tous les projets lancés simultanément. Il sert à nommer les routeurs Traefik en interne — un doublon provoquerait un conflit de routage.
+> `PROJECT_NAME` must be **unique** across all simultaneously running projects. It is used to name Traefik routers internally — a duplicate would cause a routing conflict.
 
 ---
 
-### Étape 4 — Déclarer le domaine dans le fichier hosts
+### Step 4 — Declare the domain in the hosts file
 
-Le navigateur (Chrome sur Windows) résout le DNS côté Windows. Le domaine local doit donc être déclaré dans le fichier `hosts` de Windows.
+The browser (Chrome on Windows) resolves DNS on the Windows side. The local domain must therefore be declared in the Windows `hosts` file.
 
-**Obtenir la ligne exacte à ajouter :**
+**Get the exact line to add:**
 
 ```bash
 make hosts
 ```
 
-Cette commande affiche la ligne à copier, par exemple :
+This command displays the line to copy, for example:
 
 ```
-127.0.0.1 monsite.local pma.monsite.local mail.monsite.local
+127.0.0.1 mysite.local pma.mysite.local mail.mysite.local
 ```
 
-**Ajouter la ligne dans le fichier hosts :**
+**Add the line to the hosts file:**
 
-- **Windows (WSL2)** : ouvrir `C:\Windows\System32\drivers\etc\hosts` avec le Bloc-notes **en administrateur** et ajouter la ligne.
-- **Linux / Mac natif** : `sudo nano /etc/hosts` et ajouter la ligne.
+- **Windows (WSL2)**: open `C:\Windows\System32\drivers\etc\hosts` with Notepad **as Administrator** and add the line.
+- **Native Linux / Mac**: `sudo nano /etc/hosts` and add the line.
 
-Vider le cache DNS Windows après modification :
+Flush the Windows DNS cache after editing:
 
 ```
 ipconfig /flushdns
@@ -185,186 +185,186 @@ ipconfig /flushdns
 
 ---
 
-### Étape 5 — Vérifier et lancer la stack
+### Step 5 — Verify and start the stack
 
 ```bash
-# Vérifier que le réseau traefik-net existe (local-network-multisite doit tourner)
+# Verify that the traefik-net network exists (local-network-multisite must be running)
 make check-network
 
-# Lancer WordPress + MariaDB + phpMyAdmin + Mailpit
+# Start WordPress + MariaDB + phpMyAdmin + Mailpit
 make start
 ```
 
-Contrôler que tous les conteneurs sont en cours d'exécution :
+Check that all containers are running:
 
 ```bash
 make ps
 ```
 
-Résultat attendu :
+Expected output:
 
 ```
 NAME                    SERVICE       STATUS     PORTS
-monsite-wordpress-1     wordpress     running
-monsite-mariadb-1       mariadb       running
-monsite-phpmyadmin-1    phpmyadmin    running
-monsite-mailpit-1       mailpit       running
+mysite-wordpress-1      wordpress     running
+mysite-mariadb-1        mariadb       running
+mysite-phpmyadmin-1     phpmyadmin    running
+mysite-mailpit-1        mailpit       running
 ```
 
-> Aucun port n'est exposé directement sur l'hôte — Traefik gère tout le trafic entrant.
+> No ports are exposed directly on the host — Traefik handles all incoming traffic.
 
 ---
 
-### Étape 6 — Finaliser l'installation WordPress
+### Step 6 — Complete the WordPress installation
 
-Ouvrir `https://monsite.local` dans le navigateur Windows.
+Open `https://mysite.local` in the Windows browser.
 
-L'assistant d'installation WordPress s'affiche. Renseigner :
+The WordPress installation wizard appears. Fill in:
 
-- **Titre du site** : nom de votre choix
-- **Identifiant** : admin (ou autre)
-- **Mot de passe** : choisir un mot de passe
-- **E-mail** : n'importe quelle adresse (les mails sont interceptés par Mailpit, rien ne sort)
+- **Site title**: name of your choice
+- **Username**: admin (or other)
+- **Password**: choose a password
+- **Email**: any address (emails are intercepted by Mailpit, nothing is sent out)
 
-Cliquer **Installer WordPress**.
+Click **Install WordPress**.
 
-Accéder ensuite à l'administration : `https://monsite.local/wp-admin`
-
----
-
-## 4. Variables d'environnement
-
-Toutes les variables sont définies dans `.env` (copié depuis `.env.example`).
-
-| Variable | Défaut | Description |
-|----------|--------|-------------|
-| `PROJECT_NAME` | `monsite` | Identifiant unique du projet, utilisé pour nommer les routeurs Traefik. Doit être différent pour chaque site lancé simultanément. |
-| `SITE_DOMAIN` | `monsite.local` | Domaine local du site. WordPress sera accessible sur `https://SITE_DOMAIN`. |
-| `TRAEFIK_NETWORK` | `traefik-net` | Nom du réseau Docker partagé avec Traefik. Doit correspondre à `TRAEFIK_NETWORK` dans `local-network-multisite/.env`. |
-| `DB_NAME` | `wordpress` | Nom de la base de données MariaDB. |
-| `DB_USER` | `wpuser` | Utilisateur MariaDB pour WordPress. |
-| `DB_PASSWORD` | `wppassword` | Mot de passe de l'utilisateur MariaDB. |
-| `DB_ROOT_PASSWORD` | `root` | Mot de passe root MariaDB (utilisé par phpMyAdmin). |
-| `TABLE_PREFIX` | `wp_` | Préfixe des tables WordPress. |
-| `WP_DEBUG` | `1` | Active le mode debug WordPress (`1` = activé, `0` = désactivé). |
-| `WP_MEMORY_LIMIT` | `256M` | Mémoire allouée aux requêtes front WordPress. Doit être <= `memory_limit` dans `docker/php/custom.ini`. |
-| `WP_MAX_MEMORY_LIMIT` | `256M` | Mémoire allouée à l'administration WordPress. Doit être <= `memory_limit` dans `docker/php/custom.ini`. |
+Then access the administration: `https://mysite.local/wp-admin`
 
 ---
 
-## 5. Configurer les limites PHP
+## 4. Environment variables
 
-Les limites PHP se configurent dans `docker/php/custom.ini`. Les valeurs actuelles par défaut :
+All variables are defined in `.env` (copied from `.env.example`).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PROJECT_NAME` | `mysite` | Unique project identifier, used to name Traefik routers. Must be different for each simultaneously running site. |
+| `SITE_DOMAIN` | `mysite.local` | Local site domain. WordPress will be accessible at `https://SITE_DOMAIN`. |
+| `TRAEFIK_NETWORK` | `traefik-net` | Name of the Docker network shared with Traefik. Must match `TRAEFIK_NETWORK` in `local-network-multisite/.env`. |
+| `DB_NAME` | `wordpress` | MariaDB database name. |
+| `DB_USER` | `wpuser` | MariaDB user for WordPress. |
+| `DB_PASSWORD` | `wppassword` | MariaDB user password. |
+| `DB_ROOT_PASSWORD` | `root` | MariaDB root password (used by phpMyAdmin). |
+| `TABLE_PREFIX` | `wp_` | WordPress table prefix. |
+| `WP_DEBUG` | `1` | Enable WordPress debug mode (`1` = enabled, `0` = disabled). |
+| `WP_MEMORY_LIMIT` | `256M` | Memory allocated to WordPress front-end requests. Must be <= `memory_limit` in `docker/php/custom.ini`. |
+| `WP_MAX_MEMORY_LIMIT` | `256M` | Memory allocated to the WordPress admin. Must be <= `memory_limit` in `docker/php/custom.ini`. |
+
+---
+
+## 5. Configuring PHP limits
+
+PHP limits are configured in `docker/php/custom.ini`. Current default values:
 
 ```ini
-upload_max_filesize = 2G      ; taille maximale d'un fichier uploadé
-post_max_size       = 2G      ; doit être >= upload_max_filesize
-memory_limit        = -1      ; mémoire par requête PHP (-1 = illimité)
-max_execution_time  = 300     ; secondes
-max_input_time      = 300     ; secondes
+upload_max_filesize = 2G      ; maximum size of an uploaded file
+post_max_size       = 2G      ; must be >= upload_max_filesize
+memory_limit        = -1      ; memory per PHP request (-1 = unlimited)
+max_execution_time  = 300     ; seconds
+max_input_time      = 300     ; seconds
 ```
 
-Après toute modification, redémarrer le conteneur WordPress :
+After any change, restart the WordPress container:
 
 ```bash
 docker compose restart wordpress
 
-# Vérifier que les valeurs sont bien prises en compte
+# Verify that the values are applied
 docker compose exec wordpress php -r "echo ini_get('upload_max_filesize');"
 ```
 
-> **Règle mémoire :** `WP_MEMORY_LIMIT` <= `WP_MAX_MEMORY_LIMIT` <= `memory_limit` (PHP)
+> **Memory rule:** `WP_MEMORY_LIMIT` <= `WP_MAX_MEMORY_LIMIT` <= `memory_limit` (PHP)
 
 ---
 
-## 6. Lancer plusieurs sites en parallèle
+## 6. Running multiple sites in parallel
 
-Traefik tourne dans local-network-multisite et est partagé entre tous les projets. Un second site n'a pas besoin de relancer local-network-multisite.
+Traefik runs in local-network-multisite and is shared between all projects. A second site does not need to restart local-network-multisite.
 
 ```bash
-cp -r ~/project/docker-wordpress-skeleton ~/project/autresite
-cd ~/project/autresite
+cp -r ~/project/docker-wordpress-skeleton ~/project/othersite
+cd ~/project/othersite
 cp .env.example .env
 ```
 
-Dans `.env` du second site, utiliser des valeurs uniques :
+In the second site's `.env`, use unique values:
 
 ```dotenv
-PROJECT_NAME=autresite
-SITE_DOMAIN=autresite.local
+PROJECT_NAME=othersite
+SITE_DOMAIN=othersite.local
 TRAEFIK_NETWORK=traefik-net
-DB_NAME=autresite_db
-DB_USER=autresite_user
-DB_PASSWORD=autresite_pass
+DB_NAME=othersite_db
+DB_USER=othersite_user
+DB_PASSWORD=othersite_pass
 DB_ROOT_PASSWORD=root
 ```
 
-Ajouter le domaine dans le fichier `hosts` Windows :
+Add the domain to the Windows `hosts` file:
 
 ```
-127.0.0.1 autresite.local pma.autresite.local mail.autresite.local
+127.0.0.1 othersite.local pma.othersite.local mail.othersite.local
 ```
 
-Lancer :
+Start:
 
 ```bash
 make start
 ```
 
-Les deux sites sont accessibles simultanément :
+Both sites are accessible simultaneously:
 
-- `https://monsite.local`
-- `https://autresite.local`
+- `https://mysite.local`
+- `https://othersite.local`
 
 ---
 
-## 7. Services disponibles
+## 7. Available services
 
-Pour un site dont `SITE_DOMAIN=monsite.local` :
+For a site with `SITE_DOMAIN=mysite.local`:
 
 | URL | Service | Description |
 |-----|---------|-------------|
-| `https://monsite.local` | WordPress | Front du site + admin (`/wp-admin`) |
-| `https://pma.monsite.local` | phpMyAdmin | Interface de gestion de la base de données |
-| `https://mail.monsite.local` | Mailpit | Boite mail de développement — intercepte tous les envois WordPress |
-| `https://traefik.local` | Traefik Dashboard | Vue des routeurs actifs (fourni par local-network-multisite) |
+| `https://mysite.local` | WordPress | Site front-end + admin (`/wp-admin`) |
+| `https://pma.mysite.local` | phpMyAdmin | Database management interface |
+| `https://mail.mysite.local` | Mailpit | Development mailbox — intercepts all WordPress outgoing mail |
+| `https://traefik.local` | Traefik Dashboard | Active routers view (provided by local-network-multisite) |
 
-> Mailpit capture tous les e-mails envoyés par WordPress (réinitialisation de mot de passe, notifications WooCommerce, etc.). Aucun mail ne sort réellement vers l'extérieur.
+> Mailpit captures all emails sent by WordPress (password reset, WooCommerce notifications, etc.). No email is actually sent to the outside.
 
 ---
 
-## 8. Commandes Make
+## 8. Make commands
 
 ```bash
-make help           # Liste toutes les commandes disponibles avec leur description
+make help           # List all available commands with their description
 ```
 
-### Démarrage et arrêt
+### Start and stop
 
-| Commande | Description |
-|----------|-------------|
-| `make start` | Démarre la stack WordPress (local-network-multisite doit tourner) |
-| `make stop` | Arrête tous les conteneurs du projet |
-| `make restart` | Arrête puis redémarre la stack |
-| `make logs` | Affiche les logs en temps réel (Ctrl+C pour quitter) |
-| `make ps` | Liste les conteneurs du projet et leur statut |
+| Command | Description |
+|---------|-------------|
+| `make start` | Start the WordPress stack (local-network-multisite must be running) |
+| `make stop` | Stop all project containers |
+| `make restart` | Stop then restart the stack |
+| `make logs` | Display real-time logs (Ctrl+C to quit) |
+| `make ps` | List project containers and their status |
 
-### WordPress et base de données
+### WordPress and database
 
-| Commande | Description |
-|----------|-------------|
-| `make wp-cli CMD="..."` | Exécute une commande WP-CLI dans le conteneur WordPress |
-| `make wp-shell` | Ouvre un shell bash dans le conteneur WordPress |
-| `make db-shell` | Ouvre un shell MariaDB en root |
+| Command | Description |
+|---------|-------------|
+| `make wp-cli CMD="..."` | Run a WP-CLI command in the WordPress container |
+| `make wp-shell` | Open a bash shell in the WordPress container |
+| `make db-shell` | Open a MariaDB shell as root |
 
-### Utilitaires
+### Utilities
 
-| Commande | Description |
-|----------|-------------|
-| `make check-network` | Vérifie que le réseau `traefik-net` existe |
-| `make hosts` | Affiche la ligne à ajouter dans le fichier hosts |
+| Command | Description |
+|---------|-------------|
+| `make check-network` | Verify that the `traefik-net` network exists |
+| `make hosts` | Display the line to add to the hosts file |
 
-### Exemples WP-CLI
+### WP-CLI examples
 
 ```bash
 make wp-cli CMD="plugin list"
@@ -372,33 +372,33 @@ make wp-cli CMD="theme list"
 make wp-cli CMD="user list"
 make wp-cli CMD="cache flush"
 
-# WP-CLI directement dans le conteneur
+# WP-CLI directly in the container
 docker compose exec wordpress wp plugin install woocommerce --activate --allow-root
-docker compose exec wordpress wp search-replace 'http://ancien-domaine.local' 'https://monsite.local' --allow-root
+docker compose exec wordpress wp search-replace 'http://old-domain.local' 'https://mysite.local' --allow-root
 ```
 
 ---
 
-## 9. Structure des fichiers
+## 9. File structure
 
 ```
 docker-wordpress-skeleton/
-├── compose.yaml               # Définition des services Docker
-├── .env                       # Configuration du site (à créer depuis .env.example)
-├── .env.example               # Modèle de configuration
-├── Makefile                   # Commandes raccourcis
+├── compose.yaml               # Docker service definitions
+├── .env                       # Site configuration (to create from .env.example)
+├── .env.example               # Configuration template
+├── Makefile                   # Shortcut commands
 │
-├── wp-content/                # Monté dans le conteneur WordPress
-│   ├── themes/                # Thèmes (versionnables)
-│   ├── plugins/               # Plugins (versionnables)
-│   └── uploads/               # Médias uploadés (à exclure du git)
+├── wp-content/                # Mounted into the WordPress container
+│   ├── themes/                # Themes (versionable)
+│   ├── plugins/               # Plugins (versionable)
+│   └── uploads/               # Uploaded media (exclude from git)
 │
 └── docker/
     └── php/
-        └── custom.ini         # Configuration PHP (upload, mémoire, etc.)
+        └── custom.ini         # PHP configuration (upload, memory, etc.)
 ```
 
-**Recommandations `.gitignore` :**
+**Recommended `.gitignore`:**
 
 ```gitignore
 .env
@@ -407,62 +407,62 @@ wp-content/uploads/
 
 ---
 
-## 10. Dépannage
+## 10. Troubleshooting
 
-### Le réseau `traefik-net` est introuvable
+### The `traefik-net` network is not found
 
 ```bash
 make check-network
-# Si erreur : démarrer local-network-multisite
+# If error: start local-network-multisite
 cd ~/project/local-network-multisite && make up
 ```
 
-### Le site affiche une erreur SSL / certificat non reconnu
+### The site shows an SSL error / untrusted certificate
 
-Les certificats sont gérés par local-network-multisite. Vérifier :
+Certificates are managed by local-network-multisite. Check:
 
-1. Que `make certs` a été exécuté dans local-network-multisite
-2. Que le CA mkcert a été importé dans le magasin de certificats Windows (`certmgr.msc` -> Trusted Root Certification Authorities)
-3. Que Chrome a été redémarré après l'import
-4. Que local-network-multisite tourne : `cd ~/project/local-network-multisite && make ps`
+1. That `make certs` has been run in local-network-multisite
+2. That the mkcert CA has been imported into the Windows certificate store (`certmgr.msc` → Trusted Root Certification Authorities)
+3. That Chrome has been restarted after the import
+4. That local-network-multisite is running: `cd ~/project/local-network-multisite && make ps`
 
-### Le domaine ne se résout pas (`ERR_NAME_NOT_RESOLVED`)
+### The domain does not resolve (`ERR_NAME_NOT_RESOLVED`)
 
-- Vérifier le fichier `hosts` Windows : la ligne doit pointer vers `127.0.0.1`
-- Vider le cache DNS Windows : `ipconfig /flushdns` dans PowerShell
-- S'assurer que le navigateur ne passe pas par un proxy
+- Check the Windows `hosts` file: the line must point to `127.0.0.1`
+- Flush the Windows DNS cache: `ipconfig /flushdns` in PowerShell
+- Make sure the browser is not going through a proxy
 
-### Erreur "port 80 already in use"
+### Error "port 80 already in use"
 
-Un autre service occupe le port 80 ou 443. Vérifier qu'aucun autre Traefik ou serveur web ne tourne en parallèle :
+Another service is using port 80 or 443. Check that no other Traefik or web server is running in parallel:
 
 ```bash
 sudo lsof -i :80
 sudo lsof -i :443
 ```
 
-### WordPress redirige en boucle ou affiche "Too many redirects"
+### WordPress redirects in a loop or shows "Too many redirects"
 
-`WP_SITEURL` / `WP_HOME` est mal configuré. Vérifier dans `.env` que `SITE_DOMAIN` correspond exactement au domaine déclaré dans le fichier `hosts`.
+`WP_SITEURL` / `WP_HOME` is misconfigured. Check in `.env` that `SITE_DOMAIN` exactly matches the domain declared in the `hosts` file.
 
-En dernier recours, corriger via phpMyAdmin dans la table `wp_options`, champs `siteurl` et `home`.
+As a last resort, correct it via phpMyAdmin in the `wp_options` table, fields `siteurl` and `home`.
 
-### Les mails ne s'affichent pas dans Mailpit
+### Emails are not displayed in Mailpit
 
-WordPress utilise par défaut la fonction PHP `mail()`. Pour que Mailpit intercepte les mails, un plugin SMTP est nécessaire :
+WordPress uses the PHP `mail()` function by default. For Mailpit to intercept emails, an SMTP plugin is required:
 
-1. Installer **WP Mail SMTP** ou **FluentSMTP** via l'administration WordPress
-2. Configurer : hôte `mailpit`, port `1025`, sans authentification
+1. Install **WP Mail SMTP** or **FluentSMTP** via the WordPress admin
+2. Configure: host `mailpit`, port `1025`, no authentication
 
-### Le dashboard Traefik est vide (aucun routeur affiché)
+### The Traefik dashboard is empty (no routers displayed)
 
-Le conteneur WordPress n'a pas encore démarré ou ses labels n'ont pas été lus.
+The WordPress container has not yet started or its labels have not been read.
 
 ```bash
-make logs   # Vérifier qu'il n'y a pas d'erreur au démarrage
+make logs   # Check for startup errors
 cd ~/project/local-network-multisite && docker compose restart traefik
 ```
 
-### Deux projets ont le même `PROJECT_NAME`
+### Two projects have the same `PROJECT_NAME`
 
-Si deux projets partagent le même `PROJECT_NAME`, leurs routeurs Traefik entrent en conflit et l'un des deux sites devient inaccessible. Chaque projet doit avoir une valeur `PROJECT_NAME` unique dans son `.env`.
+If two projects share the same `PROJECT_NAME`, their Traefik routers conflict and one of the sites becomes inaccessible. Each project must have a unique `PROJECT_NAME` value in its `.env`.
