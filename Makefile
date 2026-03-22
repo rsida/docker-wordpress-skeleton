@@ -43,9 +43,16 @@ db-shell: ## Ouvre un shell MariaDB
 ps: ## Liste les conteneurs du projet
 	docker compose ps
 
-hosts: ## Affiche les entrees a ajouter dans le fichier hosts Windows
+hosts: ## Ajoute les domaines dans /etc/hosts (Linux) et affiche la ligne pour Windows
+	@HOSTS_LINE="127.0.0.1 $(SITE_DOMAIN) pma.$(SITE_DOMAIN) mail.$(SITE_DOMAIN)"; \
+	if grep -qF "$(SITE_DOMAIN)" /etc/hosts; then \
+		echo "/etc/hosts : entree deja presente pour $(SITE_DOMAIN)"; \
+	else \
+		echo "$$HOSTS_LINE" | sudo tee -a /etc/hosts > /dev/null; \
+		echo "/etc/hosts : entree ajoutee ($$HOSTS_LINE)"; \
+	fi
 	@echo ""
-	@echo "Ajouter dans C:\\Windows\\System32\\drivers\\etc\\hosts :"
+	@echo "Ajouter aussi dans C:\\Windows\\System32\\drivers\\etc\\hosts :"
 	@echo ""
 	@echo "  127.0.0.1 $(SITE_DOMAIN) pma.$(SITE_DOMAIN) mail.$(SITE_DOMAIN)"
 	@echo ""
